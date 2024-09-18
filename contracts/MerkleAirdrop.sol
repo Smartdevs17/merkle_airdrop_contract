@@ -20,6 +20,7 @@ contract MerkleAirdrop {
 
     function claim(address user,uint256 amount, bytes32[] calldata merkleProof) external {
         console.log("Claiming amount:", amount);
+        require(user != address(0), "Invalid address: zero address");
         require(bayc.balanceOf(user) > 0, "Must own a BAYC NFT");
         require(!claimed[user], "Airdrop already claimed");
 

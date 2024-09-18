@@ -64,12 +64,12 @@ describe("MerkleAirdrop", function () {
   });
 
   it("Should not allow ineligible user to claim airdrop", async function () {
-    const { airdrop, user1, token  } = await loadFixture(deployMerkleAirdrop);
-    const TOKEN_HOLDER = "0xaAa2DA255DF9Ee74C7075bCB6D81f97940908A5D";
+    const { airdrop, user1  } = await loadFixture(deployMerkleAirdrop);
+    const TOKEN_HOLDER = "0xa0Ee7A142d267C1f36714E4a8F75612F20a79720";
     const amount = ethers.parseEther("100.0").toString();
     const proof = await generateMerkleProof(TOKEN_HOLDER, amount);
 
-    await expect(airdrop.connect(user1).claim(user1.address,amount, proof)).to.be.revertedWith("Must own a BAYC NFT");
+    await expect(airdrop.connect(user1).claim(TOKEN_HOLDER,amount, proof)).to.be.revertedWith("Must own a BAYC NFT");
     });
 
     it("Should not allow double claiming", async function () {
@@ -84,12 +84,20 @@ describe("MerkleAirdrop", function () {
 
     it("Should not allow claiming with invalid proof", async function () {
       const { airdrop, user1  } = await loadFixture(deployMerkleAirdrop);
-      const TOKEN_HOLDER = "0xaAa2DA255DF9Ee74C7075bCB6D81f97940908A5D";
+      const TOKEN_HOLDER = "0xe2A83b15FC300D8457eB9E176f98d92a8FF40a49";
       const amount = ethers.parseEther("100.0").toString();
-      const proof = await generateMerkleProof(TOKEN_HOLDER, amount);
-      const invalidProof = proof.slice(1);
+      const invalidProof = await generateMerkleProof(TOKEN_HOLDER, amount);
 
       await expect(airdrop.connect(user1).claim(TOKEN_HOLDER,amount, invalidProof)).to.be.revertedWith("Invalid Merkle Proof");
+    });
+
+    it("Should not allow claiming with zero address", async function () {
+      const { airdrop, user1  } = await loadFixture(deployMerkleAirdrop);
+      const TOKEN_HOLDER = "0x0000000000000000000000000000000000000000";
+      const amount = ethers.parseEther("100.0").toString();
+      const proof = await generateMerkleProof(TOKEN_HOLDER, amount);
+
+      await expect(airdrop.connect(user1).claim(TOKEN_HOLDER,amount, proof)).to.be.revertedWith("Invalid address: zero address");
     });
 
 });
