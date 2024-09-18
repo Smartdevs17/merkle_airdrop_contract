@@ -1,38 +1,33 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
-import "hardhat/console.sol";
-import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol"; 
+pragma solidity ^0.8.0;
 
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "hardhat/console.sol";
 contract MerkleAirdrop {
     IERC20 public token;
+    IERC721 public bayc;
     bytes32 public merkleRoot;
-    mapping(address => bool) public hasClaimed;
+    mapping(address => bool) public claimed;
 
-    event Claim(address indexed user, uint256 amount);
-
-    constructor(IERC20 _token, bytes32 _merkleRoot) {
-        token = _token;
+    constructor(address _token, address _bayc, bytes32 _merkleRoot) {
+        token = IERC20(_token);
+        bayc = IERC721(_bayc);
         merkleRoot = _merkleRoot;
     }
 
-    function claim(address _address, uint256 amount, bytes32[] memory proof) public {
-        require(!hasClaimed[_address], "Already claimed");
-        
-        bytes32 computedHash = keccak256(abi.encodePacked(_address, amount));        
-        require(MerkleProof.verify(proof, merkleRoot, computedHash), "Invalid proof");
+    function claim(address user,uint256 amount, bytes32[] calldata merkleProof) external {
+        console.log("Claiming amount:", amount);
+        require(bayc.balanceOf(user) > 0, "Must own a BAYC NFT");
+        require(!claimed[user], "Airdrop already claimed");
 
-        hasClaimed[_address] = true;
-        token.transfer(_address, amount);
-        emit Claim(_address, amount);
-    }
-
-
-    function updateMerkleRoot(bytes32 _merkleRoot) public {
-        merkleRoot = _merkleRoot;
-    }
-
-    function withdrawRemainingTokens() public {
-        token.transfer(msg.sender, token.balanceOf(address(this)));
+        bytes32 leaf = keccak256(abi.encodePacked(user, amount));
+        require(MerkleProof.verify(merkleProof, merkleRoot, leaf), "Invalid Merkle Proof");
+        console.log("Merkle Proof verified");
+        claimed[user] = true;
+        console.log("Token transfer started");
+        require(token.transfer(user, amount), "Token transfer failed");
     }
 }

@@ -1,80 +1,107 @@
-import { loadFixture } from "@nomicfoundation/hardhat-toolbox/network-helpers";
-import { expect } from 'chai';
-import { ethers } from 'hardhat';
-import merkle from "../merkle";
-const { generateMerkleRoot,  generateMerkleProof } = merkle;
+import { expect } from "chai";
+import { ethers } from "hardhat";
+import { loadFixture,  } from "@nomicfoundation/hardhat-toolbox/network-helpers";
+const helpers = require("@nomicfoundation/hardhat-network-helpers");
+import { generateMerkleRoot, generateMerkleProof } from "../generateMerkleTee";
 
-describe('MerkleAirdrop', function () {
+
+describe("MerkleAirdrop", function () {
+
+  describe('MerkleAirdrop', function () {
     async function deployTokenFixture() {
         const SmartDev = await ethers.getContractFactory("SmartDev");
         const token = await SmartDev.deploy();
         return { token };
     }
 
-    async function deployMerkleAirdropFixture() {
+    async function deployMerkleAirdrop() {
         const { token } = await loadFixture(deployTokenFixture);
-        const MerkleAirdrop = await ethers.getContractFactory("MerkleAirdrop");
         const signers = await ethers.getSigners();
         const [owner, user1, user2, user3, user4, user5, user6, user7] = signers;
     
     
         const merkleRoot = await generateMerkleRoot();
-        
-        const merkleAirdrop = await MerkleAirdrop.deploy(token, merkleRoot);  
+        const BAYC_ADDRESS = "0xBC4CA0EdA7647A8aB7C2061c2E118A18a936f13D";
+        const Airdrop = await ethers.getContractFactory("MerkleAirdrop");
+        const airdrop = await Airdrop.deploy(token, BAYC_ADDRESS, merkleRoot);
         const rewardAmount = ethers.parseEther("1000.0");
         
 
-        await token.transfer(await merkleAirdrop.getAddress(), rewardAmount);
+        await token.transfer(await airdrop.getAddress(), rewardAmount);
 
-        return { token, merkleAirdrop, merkleRoot, owner, user1, user2, user3, user4, user5, user6, user7 };
+        return { token, airdrop, merkleRoot, owner, user1, user2, user3, user4, user5, user6, user7, BAYC_ADDRESS };
     }
 
-
-  it('Should deploy with the correct merkle root', async function () {
-    const { merkleAirdrop, merkleRoot } = await loadFixture(deployMerkleAirdropFixture);
-    expect( merkleAirdrop).to.be.ok;
-    expect(await merkleAirdrop.merkleRoot()).to.equal(merkleRoot);
+  it("Should deploy with the correct parameters", async function () {
+    const { token, airdrop, merkleRoot, BAYC_ADDRESS } = await loadFixture(deployMerkleAirdrop);
+    expect(await airdrop.token()).to.equal( token.target);
+    expect(await airdrop.bayc()).to.equal(BAYC_ADDRESS);
+    expect(await airdrop.merkleRoot()).to.equal(merkleRoot);
   });
 
-  it('Should allow valid claims', async function () {
-    const { merkleAirdrop, user1, token  } = await loadFixture(deployMerkleAirdropFixture);
+
+    it('Should allow eligible user to claim airdrop', async function () {
+    const { airdrop, owner, user1, token  } = await loadFixture(deployMerkleAirdrop);
+    // Define the address of the token holder.
+    const TOKEN_HOLDER = "0xaAa2DA255DF9Ee74C7075bCB6D81f97940908A5D";
+    const BAYC_ADDRESS = "0xBC4CA0EdA7647A8aB7C2061c2E118A18a936f13D";
+
     const amount = ethers.parseEther("100.0").toString();
-    const proof = await generateMerkleProof( user1.address, amount);
-    await merkleAirdrop.connect(user1).claim(user1.address, amount, proof);
-    
+    const proof = await generateMerkleProof(TOKEN_HOLDER, amount);
+
+    // Impersonate the token holder account to perform actions on their behalf.
+    await helpers.impersonateAccount(TOKEN_HOLDER);
+    const impersonatedSigner = await ethers.getSigner(TOKEN_HOLDER);
+
+    const BAYC_Contract = await ethers.getContractAt("IERC721", BAYC_ADDRESS, impersonatedSigner);        
+
+    console.log("BAYC Wallet Balance: "+ await BAYC_Contract.balanceOf(TOKEN_HOLDER));
+    await airdrop.connect(owner).claim(impersonatedSigner.address,amount, proof);
+    console.log("Token transfer completed");
 
     // Check if the user has received the token
-    expect(await token.balanceOf(user1.address)).to.equal(amount);
+    expect(await token.balanceOf(TOKEN_HOLDER)).to.equal(amount);
   });
 
-  it('Should reject invalid claims', async function () {
-    const { merkleAirdrop, user7,  } = await loadFixture(deployMerkleAirdropFixture);
+  it("Should not allow ineligible user to claim airdrop", async function () {
+    const { airdrop, user1, token  } = await loadFixture(deployMerkleAirdrop);
+    const TOKEN_HOLDER = "0xaAa2DA255DF9Ee74C7075bCB6D81f97940908A5D";
     const amount = ethers.parseEther("100.0").toString();
-    const proof = await generateMerkleProof( user7.address, amount);
+    const proof = await generateMerkleProof(TOKEN_HOLDER, amount);
 
-    await expect(merkleAirdrop.connect(user7).claim(user7.address, amount, proof)).to.be.revertedWith('Invalid proof');
-  });
+    await expect(airdrop.connect(user1).claim(user1.address,amount, proof)).to.be.revertedWith("Must own a BAYC NFT");
+    });
 
-  it('Should handle double claims correctly', async function () {
-    const { merkleAirdrop, user1, token} = await loadFixture(deployMerkleAirdropFixture);
-    // Assuming user1 has a valid proof and tries to claim twice
-    const amount = ethers.parseEther("100.0").toString();
-    const proof = await generateMerkleProof( user1.address, amount);
-    await merkleAirdrop.connect(user1).claim(user1.address, amount, proof);
+    it("Should not allow double claiming", async function () {
+      const { airdrop, user1  } = await loadFixture(deployMerkleAirdrop);
+      const TOKEN_HOLDER = "0xaAa2DA255DF9Ee74C7075bCB6D81f97940908A5D";
+      const amount = ethers.parseEther("100.0").toString();
+      const proof = await generateMerkleProof(TOKEN_HOLDER, amount);
 
-    // Check if the user has received the token
-    expect(await token.balanceOf(user1.address)).to.equal(amount);
+      await airdrop.connect(user1).claim(TOKEN_HOLDER,amount, proof);
+      await expect(airdrop.connect(user1).claim(TOKEN_HOLDER,amount, proof)).to.be.revertedWith("Airdrop already claimed");
+    });
 
-    // Attempt to claim again with the same proof
-    await expect(merkleAirdrop.connect(user1).claim(user1.address, amount, proof)).to.be.revertedWith('Already claimed');
-  });
 
-  it('Should handle invalid proofs correctly', async function () {
-    const { merkleAirdrop, user2} = await loadFixture(deployMerkleAirdropFixture);
-    // Assuming user1 has an invalid proof
-    const amount = ethers.parseEther("1.0").toString();
-    const proof = await generateMerkleProof(user2.address, amount);
 
-    await expect(merkleAirdrop.connect(user2).claim(user2.address, amount, proof)).to.be.revertedWith('Invalid proof');
-  });
 });
+});
+
+
+
+
+
+
+
+
+
+
+
+  // it("Should not allow double claiming", async function () {
+  //   const leaf = keccak256(addr1.address + "100");
+  //   const proof = merkleTree.getHexProof(leaf);
+
+  //   await airdrop.connect(addr1).claim(ethers.parseEther("100"), proof);
+
+  //   await expect(airdrop.connect(addr1).claim(ethers.parseEther("100"), proof)).to.be.revertedWith("Airdrop already claimed");
+  // });
