@@ -82,26 +82,15 @@ describe("MerkleAirdrop", function () {
       await expect(airdrop.connect(user1).claim(TOKEN_HOLDER,amount, proof)).to.be.revertedWith("Airdrop already claimed");
     });
 
+    it("Should not allow claiming with invalid proof", async function () {
+      const { airdrop, user1  } = await loadFixture(deployMerkleAirdrop);
+      const TOKEN_HOLDER = "0xaAa2DA255DF9Ee74C7075bCB6D81f97940908A5D";
+      const amount = ethers.parseEther("100.0").toString();
+      const proof = await generateMerkleProof(TOKEN_HOLDER, amount);
+      const invalidProof = proof.slice(1);
 
+      await expect(airdrop.connect(user1).claim(TOKEN_HOLDER,amount, invalidProof)).to.be.revertedWith("Invalid Merkle Proof");
+    });
 
 });
 });
-
-
-
-
-
-
-
-
-
-
-
-  // it("Should not allow double claiming", async function () {
-  //   const leaf = keccak256(addr1.address + "100");
-  //   const proof = merkleTree.getHexProof(leaf);
-
-  //   await airdrop.connect(addr1).claim(ethers.parseEther("100"), proof);
-
-  //   await expect(airdrop.connect(addr1).claim(ethers.parseEther("100"), proof)).to.be.revertedWith("Airdrop already claimed");
-  // });

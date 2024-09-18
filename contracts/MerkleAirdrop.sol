@@ -29,5 +29,6 @@ contract MerkleAirdrop {
         claimed[user] = true;
         console.log("Token transfer started");
         require(token.transfer(user, amount), "Token transfer failed");
+        console.log("Token transfer completed");
     }
 }
