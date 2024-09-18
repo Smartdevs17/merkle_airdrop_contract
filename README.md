@@ -1,62 +1,95 @@
 # Merkle Airdrop Project
 
-## Overview
+This project demonstrates a Merkle Airdrop system using Solidity and Hardhat. The airdrop allows eligible users to claim tokens based on their inclusion in a Merkle tree.
 
-This project provides a Merkle Airdrop contract and a script to generate Merkle proofs for claiming the airdrop. The project consists of a `merkle.ts` file, which contains the implementation of the Merkle tree and proof generation, and a `MerkleAirdrop` contract.
+## Project Structure
 
-## Setup and Run
+- `contracts/`: Contains the Solidity smart contract for the Merkle Airdrop.
+- `test/`: Contains the test scripts for the Merkle Airdrop contract.
+- `scripts/`: Contains the scripts to generate the Merkle root and proofs.
+- `airdrop.csv`: Contains the list of addresses and amounts eligible for the airdrop.
 
-To set up and run the project, follow these steps:
+## Setup
 
-1. Install the required dependencies:
+1. Clone the repository:
+   ```sh
+   git clone <repository-url>
+   cd <repository-directory>
    ```
+
+2. Install dependencies:
+   ```sh
    npm install
    ```
-2. Run the script:
+
+3. Create a `.env` file and add your Alchemy API key and private key:
+   ```sh
+   ALCHEMY_API_KEY=your-alchemy-api-key
+   PRIVATE_KEY=your-private-key
    ```
-   node merkle.ts
+
+## Usage
+
+### Generating Merkle Root and Proofs
+
+1. Generate the Merkle root:
+   ```sh
+   npx hardhat run scripts/generateMerkleRoot.ts
    ```
 
-## Deploying the MerkleAirdrop Contract
+2. Generate a Merkle proof for a specific address and amount:
+   ```sh
+   npx hardhat run scripts/generateMerkleProof.ts --address <address> --amount <amount>
+   ```
 
-To deploy the MerkleAirdrop contract, follow these steps:
+### Running Tests
 
-1. Compile the contract using your preferred Solidity compiler.
-2. Deploy the contract to your preferred blockchain network.
-3. Provide the address of the ERC20 token and the Merkle root as constructor arguments.
+Run the tests to ensure the contract works as expected:
+   ```sh
+   npx hardhat test
+   ```
 
-## Generating Proofs
+### Deploying the Contract
 
-To generate a Merkle proof for claiming the airdrop, follow these steps:
+Deploy the Merkle Airdrop contract to a network:
+   ```sh
+   npx hardhat run scripts/deploy.ts --network <network-name>
+   ```
 
-1. Prepare a CSV file named `addresses.csv` containing the addresses and amounts for the airdrop.
-2. Run the `merkle.ts` script, providing the target address and amount as input.
-3. The script will generate the proof and print it to the console.
+## Contract Details
 
-## Explanation of MerkleAirdrop.sol Functions
+### MerkleAirdrop.sol
 
-The `MerkleAirdrop` contract has the following functions:
+The `MerkleAirdrop` contract allows users to claim tokens if they are part of the Merkle tree. The contract verifies the user's proof and ensures they own a BAYC NFT before allowing the claim.
 
-- `constructor`: Initializes the contract with the ERC20 token address and the Merkle root.
-- `claim`: Allows users to claim the airdrop by providing their address, amount, and Merkle proof.
-- `merkleRoot`: Returns the Merkle root used for the airdrop.
-- `token`: Returns the address of the ERC20 token used for the airdrop.
+### Functions
 
-## Assumptions and Limitations
+- `constructor(address _token, address _bayc, bytes32 _merkleRoot)`: Initializes the contract with the token address, BAYC address, and Merkle root.
+- `claim(address user, uint256 amount, bytes32[] calldata merkleProof)`: Allows a user to claim their tokens if they provide a valid Merkle proof.
 
-- The script assumes that the addresses and amounts for the airdrop are stored in a CSV file named `addresses.csv`.
-- The MerkleAirdrop contract assumes that the ERC20 token has already been deployed and that the contract has been funded with the airdrop tokens.
-- The script and the contract assume that the Merkle root is a valid 32-byte hash.
+## Testing
 
-## Implementation Details
+The test suite includes tests for:
 
-The `merkle.ts` file implements the Merkle tree and proof generation using the `MerkleTree` class from the `merkletreejs` library. The `MerkleAirdrop` contract is implemented in Solidity and uses the Merkle proof to verify the eligibility of users to claim the airdrop.
+- Deploying the contract with correct parameters.
+- Allowing eligible users to claim the airdrop.
+- Preventing ineligible users from claiming the airdrop.
+- Preventing double claiming.
+- Handling invalid proofs and zero address claims.
 
-## Testing the Application
+### Test Cases
 
-To test the application, you can use the provided test files in the `test` directory. These tests cover various scenarios such as deploying the contract with the correct Merkle root, allowing valid claims, rejecting invalid claims, and handling double claims correctly.
+1. **Deployment Tests**:
+   - Ensure the contract is deployed with the correct parameters.
 
-To run the tests, execute the following command in your terminal:
-```
-npx hardhat test
-```
+2. **Claim Tests**:
+   - Allow eligible users to claim the airdrop.
+   - Prevent ineligible users from claiming the airdrop.
+   - Prevent double claiming.
+   - Handle invalid proofs.
+   - Handle zero address claims.
+
+## License
+
+This project is licensed under the MIT License.
+
