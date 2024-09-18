@@ -7,7 +7,6 @@ import { generateMerkleRoot, generateMerkleProof } from "../generateMerkleTee";
 
 describe("MerkleAirdrop", function () {
 
-  describe('MerkleAirdrop', function () {
     async function deployTokenFixture() {
         const SmartDev = await ethers.getContractFactory("SmartDev");
         const token = await SmartDev.deploy();
@@ -100,5 +99,4 @@ describe("MerkleAirdrop", function () {
       await expect(airdrop.connect(user1).claim(TOKEN_HOLDER,amount, proof)).to.be.revertedWith("Invalid address: zero address");
     });
 
-});
 });
