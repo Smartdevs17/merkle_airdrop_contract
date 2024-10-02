@@ -57,7 +57,7 @@ async function generateMerkleProof( targetAddress: string, targetAmount: string,
       );
   
       const proof = tree.getHexProof(targetLeaf);
-      // console.log(proof);
+    //   console.log(proof);
       
       resolve(proof);
     });
